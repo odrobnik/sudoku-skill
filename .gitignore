@@ -5,3 +5,4 @@ __pycache__/
 .Python
 node_modules/
 sudoku/puzzles/
+sudoku/renders/
