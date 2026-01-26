@@ -1,7 +1,8 @@
 ---
 name: sudoku
 description: Fetch Sudoku puzzles and store them as JSON in the workspace; render images on demand; reveal solutions later.
-repository: https://github.com/odrobnik/sudoku-skill
+version: 1.2.3
+homepage: https://github.com/odrobnik/sudoku-skill
 metadata:
   clawdbot:
     emoji: "🧩"

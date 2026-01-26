@@ -1,8 +1,11 @@
-# Sudoku Skill
+# Sudoku (Clawdbot Skill)
 
-Fetch, render, and reveal Sudoku puzzles. This is a skill for [Clawdbot](https://github.com/clawdbot/clawdbot).
+Fetch, render, and reveal Sudoku puzzles.
 
-📦 **Install via ClawdHub:** [clawdhub.com/skill/sudoku](https://clawdhub.com/skill/sudoku)
+- 📦 Install via ClawdHub: https://clawdhub.com/s/sudoku
+- 🤖 How the skill works (agent docs): **[SKILL.md](SKILL.md)**
+
+This is a skill for [Clawdbot](https://github.com/clawdbot/clawdbot).
 
 ## Functions
 

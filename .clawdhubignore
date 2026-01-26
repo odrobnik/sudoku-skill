@@ -1,7 +1,15 @@
+.git/
+.DS_Store
 venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.env
+# GitHub-only docs
+README.md
+# Local secrets
+tokens-*.json
+secrets/
 .Python
 sudoku/
