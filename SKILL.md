@@ -4,7 +4,7 @@ description: Fetch Sudoku puzzles and store them as JSON in the workspace; rende
 version: 1.2.3
 homepage: https://github.com/odrobnik/sudoku-skill
 metadata:
-  clawdbot:
+  moltbot:
     emoji: "🧩"
     requires:
       bins: ["python3", "node"]
