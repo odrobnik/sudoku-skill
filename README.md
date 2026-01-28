@@ -1,11 +1,11 @@
-# Sudoku (Clawdbot Skill)
+# Sudoku (Moltbot Skill)
 
 Fetch, render, and reveal Sudoku puzzles.
 
 - 📦 Install via ClawdHub: https://clawdhub.com/s/sudoku
 - 🤖 How the skill works (agent docs): **[SKILL.md](SKILL.md)**
 
-This is a skill for [Clawdbot](https://github.com/clawdbot/clawdbot).
+This is a skill for [Moltbot](https://github.com/moltbot/moltbot).
 
 ## Functions
 
