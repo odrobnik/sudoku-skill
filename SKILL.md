@@ -1,9 +1,13 @@
 ---
 name: sudoku
 description: Fetch Sudoku puzzles and store them as JSON in the workspace; render images on demand; reveal solutions later.
-version: 1.2.4
+version: 1.2.6
 homepage: https://github.com/odrobnik/sudoku-skill
 metadata:
+  openclaw:
+    emoji: "🧩"
+    requires:
+      bins: ["python3", "node"]
   moltbot:
     emoji: "🧩"
     requires:
