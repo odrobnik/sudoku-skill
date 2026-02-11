@@ -58,9 +58,21 @@ from sudoku_print_render import render_sudoku_a4_pdf  # type: ignore
 
 
 # Storage (workspace-local)
-# Use SUDOKU_WORKSPACE env var, or default to ~/clawd.
-# This ensures puzzles/renders always go to the same place regardless of cwd.
-WORKSPACE_ROOT = Path(os.environ.get("SUDOKU_WORKSPACE", Path.home() / "clawd"))
+# Walk up from the script's location to find the workspace root (parent of "skills/").
+# Falls back to SUDOKU_WORKSPACE env var, then cwd.
+def _find_workspace_root() -> Path:
+    env = os.environ.get("SUDOKU_WORKSPACE")
+    if env:
+        return Path(env)
+    # Script is at <workspace>/skills/sudoku/scripts/sudoku.py
+    d = Path(__file__).resolve().parent
+    for _ in range(6):
+        if (d / "skills").is_dir() and d != d.parent:
+            return d
+        d = d.parent
+    return Path.cwd()
+
+WORKSPACE_ROOT = _find_workspace_root()
 PUZZLES_DIR = WORKSPACE_ROOT / "sudoku" / "puzzles"
 RENDERS_DIR = WORKSPACE_ROOT / "sudoku" / "renders"
 
