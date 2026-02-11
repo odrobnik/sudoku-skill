@@ -7,6 +7,12 @@ Fetch, render, and reveal Sudoku puzzles.
 
 This is a skill for [Moltbot](https://github.com/moltbot/moltbot).
 
+## Requirements
+
+```bash
+python3 -m pip install requests Pillow
+```
+
 ## Functions
 
 - **Fetch Puzzles:** Download new 9x9 or 6x6 puzzles from sudokuonline.io.
