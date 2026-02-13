@@ -162,15 +162,15 @@ def parse_preloaded_puzzles(html: str) -> List[Dict[str, Any]]:
     blob = m.group(1)
     puzzles: List[Dict[str, Any]] = []
 
-    # Entries are JS-ish object literals — convert to valid JSON and parse safely.
+    # Entries are JS/Python-ish object literals — convert to valid JSON and parse safely.
     for pm in re.finditer(r"\{[^}]+\}", blob):
         s = pm.group(0)
         # Fix JS keywords → JSON
         s = re.sub(r"\btrue\b", "true", s)
         s = re.sub(r"\bfalse\b", "false", s)
         s = re.sub(r"\bnull\b", "null", s)
-        # Quote unquoted keys: word: → "word":
-        s = re.sub(r"(\w+)\s*:", r'"\1":', s)
+        # Replace single quotes with double quotes (site uses Python-style 'key': 'value')
+        s = s.replace("'", '"')
         try:
             obj = json.loads(s)
             if isinstance(obj, dict) and "id" in obj and "data" in obj:
