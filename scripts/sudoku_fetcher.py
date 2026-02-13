@@ -25,8 +25,6 @@ DEFAULT_URL = "https://www.sudokuonline.io/kids/numbers-6-6"
 
 # Repo-local helpers (avoid absolute paths; makes this portable)
 REPO_ROOT = Path(__file__).resolve().parent
-ENCODE_LZ_JS = REPO_ROOT / "encode_lz.js"
-ENCODE_NATIVE_JS = REPO_ROOT / "encode_native.js"
 
 def fetch_puzzles(url):
     """Fetch preloaded puzzles from the given URL."""
