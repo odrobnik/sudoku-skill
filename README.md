@@ -70,3 +70,8 @@ Reveal the solution for the latest or specific puzzle.
 ```bash
 ./scripts/sudoku.py share
 ```
+
+## Documentation
+
+- [SKILL.md](SKILL.md) — agent-facing reference (commands, behavior, limitations)
+- [ClawHub](https://www.clawhub.com/skills/sudoku) — install via ClawHub registry
