@@ -1,7 +1,7 @@
 ---
 name: sudoku
 description: Fetch Sudoku puzzles and store them as JSON in the workspace; render images on demand; reveal solutions later.
-version: 1.3.0
+version: 1.3.1
 homepage: https://github.com/odrobnik/sudoku-skill
 metadata:
   openclaw:
