@@ -60,10 +60,6 @@ from sudoku_print_render import render_sudoku_a4_pdf  # type: ignore
 # Walk up from the script's location to find the workspace root (parent of "skills/").
 # Falls back to SUDOKU_WORKSPACE env var, then cwd.
 def _find_workspace_root() -> Path:
-    env = os.environ.get("SUDOKU_WORKSPACE")
-    if env:
-        return Path(env)
-    
     # Prefer CWD if it looks like a workspace (handles symlinks correctly)
     cwd = Path.cwd()
     if (cwd / "skills").is_dir():
@@ -301,12 +297,27 @@ def find_puzzle_json_by_id(puzzle_id: str) -> Path:
     raise FileNotFoundError(f"No stored puzzle JSON found for id={puzzle_id}")
 
 
+def _safe_file_path(raw: str) -> Path:
+    """Validate that a --file path is inside the workspace or /tmp.
+
+    Prevents arbitrary file read via crafted paths.
+    """
+    p = Path(raw).expanduser().resolve()
+    ws = WORKSPACE_ROOT.resolve()
+    tmp = Path("/tmp").resolve()
+    if not (str(p).startswith(str(ws) + os.sep) or str(p).startswith(str(tmp) + os.sep)):
+        raise SystemExit(f"--file path must be inside workspace ({ws}) or /tmp")
+    if not p.suffix == ".json":
+        raise SystemExit("--file must point to a .json file")
+    return p
+
+
 def load_puzzle_doc(*, file: Optional[str] = None, puzzle_id: Optional[str] = None, latest: bool = False) -> Tuple[Dict[str, Any], Path]:
     if sum(1 for x in (file is not None, puzzle_id is not None, latest) if x) > 1:
         raise SystemExit("Use only one of --file / --id / --latest")
 
     if file is not None:
-        p = Path(file).expanduser()
+        p = _safe_file_path(file)
         if not p.exists():
             raise FileNotFoundError(p)
     elif puzzle_id is not None:
