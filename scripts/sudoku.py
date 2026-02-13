@@ -24,7 +24,6 @@ Notes:
 from __future__ import annotations
 
 import argparse
-import ast
 import json
 import math
 import os
@@ -163,17 +162,20 @@ def parse_preloaded_puzzles(html: str) -> List[Dict[str, Any]]:
     blob = m.group(1)
     puzzles: List[Dict[str, Any]] = []
 
-    # Entries are JS-ish object literals.
+    # Entries are JS-ish object literals — convert to valid JSON and parse safely.
     for pm in re.finditer(r"\{[^}]+\}", blob):
         s = pm.group(0)
-        s = re.sub(r"\btrue\b", "True", s)
-        s = re.sub(r"\bfalse\b", "False", s)
-        s = re.sub(r"\bnull\b", "None", s)
+        # Fix JS keywords → JSON
+        s = re.sub(r"\btrue\b", "true", s)
+        s = re.sub(r"\bfalse\b", "false", s)
+        s = re.sub(r"\bnull\b", "null", s)
+        # Quote unquoted keys: word: → "word":
+        s = re.sub(r"(\w+)\s*:", r'"\1":', s)
         try:
-            obj = ast.literal_eval(s)
+            obj = json.loads(s)
             if isinstance(obj, dict) and "id" in obj and "data" in obj:
                 puzzles.append(obj)
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             continue
 
     return puzzles
