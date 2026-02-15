@@ -200,7 +200,7 @@ def generate_puzzle_link(grid, size, title="Sudoku", author="Moltbot"):
         "givens": givens_str,
         "metadata": {"title": title, "author": author},
     }
-    json_str = json.dumps(scl_obj)
+    json_str = json.dumps(scl_obj, separators=(',', ':'))
 
     try:
         compressed = _lz.compressToBase64(json_str)
@@ -226,7 +226,7 @@ def generate_native_link(grid, size, title="Sudoku"):
     }
 
     try:
-        compressed = _lz.compressToBase64(json.dumps(wrapper))
+        compressed = _lz.compressToBase64(json.dumps(wrapper, separators=(',', ':')))
         return f"https://sudokupad.svencodes.com/puzzle/{compressed}"
     except Exception as e:
         return f"Error generating native link: {e}"
@@ -255,8 +255,8 @@ def generate_fpuzzles_link(grid, size, title="Sudoku", author="Moltbot"):
                 cell["given"] = True
             fpuzzles_obj["grid"].append(cell)
 
-    # Convert to JSON string
-    json_str = json.dumps(fpuzzles_obj)
+    # Convert to JSON string (compact, like JSON.stringify)
+    json_str = json.dumps(fpuzzles_obj, separators=(',', ':'))
 
     # Compress (Raw Deflate)
     compressor = zlib.compressobj(level=9, wbits=-15)
