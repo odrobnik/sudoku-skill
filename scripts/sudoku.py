@@ -13,7 +13,8 @@ Data source: https://www.sudokuonline.io (pages embed a `preloadedPuzzles` array
 Commands:
   - list
   - get <preset> [--count N] [--id ID] [--render] [--json]
-  - puzzle [--latest|--id ID] [--json]
+  - render [--latest|--id ID] [--pdf|--printable] [--json]
+  - html [--latest|--id ID] [--json]
   - reveal [--latest|--id ID] [--full|--box ...|--cell r c] [--image] [--json]
 
 Notes:
@@ -150,12 +151,53 @@ def ensure_dirs() -> None:
     RENDERS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def parse_preloaded_puzzles(html: str) -> List[Dict[str, Any]]:
-    m = re.search(r"const preloadedPuzzles = \[(.*?)\];", html, re.DOTALL)
-    if not m:
-        raise ValueError("Could not find preloadedPuzzles in HTML")
+def _extract_js_array_contents(html: str, var_name: str) -> str:
+    marker = f"const {var_name} = ["
+    marker_pos = html.find(marker)
+    if marker_pos < 0:
+        raise ValueError(f"Could not find {var_name} in HTML")
 
-    blob = m.group(1)
+    # Position at the opening '['
+    start = marker_pos + len(marker) - 1
+
+    depth = 0
+    in_string = False
+    string_quote = ""
+    escape = False
+
+    for i in range(start, len(html)):
+        ch = html[i]
+
+        if in_string:
+            if escape:
+                escape = False
+                continue
+            if ch == "\\":
+                escape = True
+                continue
+            if ch == string_quote:
+                in_string = False
+            continue
+
+        if ch in ("'", '"'):
+            in_string = True
+            string_quote = ch
+            continue
+
+        if ch == "[":
+            depth += 1
+            continue
+
+        if ch == "]":
+            depth -= 1
+            if depth == 0:
+                return html[start + 1 : i]
+
+    raise ValueError(f"Could not parse {var_name} array from HTML")
+
+
+def parse_preloaded_puzzles(html: str) -> List[Dict[str, Any]]:
+    blob = _extract_js_array_contents(html, "preloadedPuzzles")
     puzzles: List[Dict[str, Any]] = []
 
     # Entries are JS/Python-ish object literals — convert to valid JSON and parse safely.
@@ -208,7 +250,7 @@ def pick_puzzle(
         raise ValueError("No puzzles found")
 
     if puzzle_id is not None:
-        needle = str(puzzle_id).strip().lower()
+        needle = _normalize_id_fragment(puzzle_id).lower()
         matches: List[Tuple[int, Dict[str, Any]]] = []
         for i, p in enumerate(puzzles):
             pid = str(p.get("id", ""))
@@ -280,10 +322,20 @@ def latest_puzzle_json() -> Path:
     return files[-1]
 
 
+def _normalize_id_fragment(value: str) -> str:
+    s = str(value or "").strip()
+    if not s:
+        raise ValueError("Puzzle id cannot be empty")
+    if not re.fullmatch(r"[0-9A-Fa-f-]{1,64}", s):
+        raise ValueError("Puzzle id may only contain hex characters and '-'")
+    return s
+
+
 def find_puzzle_json_by_short_id(short_id: str) -> Path:
     """Fast-path lookup by the short ID used in filenames (first UUID segment)."""
     ensure_dirs()
-    matches = sorted(PUZZLES_DIR.glob(f"*_{short_id}.json"), key=lambda p: p.stat().st_mtime)
+    sid = _normalize_id_fragment(short_id).split("-")[0].lower()
+    matches = [p for p in list_puzzle_jsons() if p.name.lower().endswith(f"_{sid}.json")]
     if not matches:
         raise FileNotFoundError(f"No stored puzzle JSON found for short id={short_id}")
     return matches[-1]
@@ -296,33 +348,33 @@ def find_puzzle_json_by_id(puzzle_id: str) -> Path:
     - full UUID (e.g. 324306f5-034d-4089-8723-56a8087fde14)
     - short ID (first segment, e.g. 324306f5) which is embedded in the filename
 
-    Fast path: try filename match first; fallback: scan JSON contents.
+    Fast path: try filename suffix match first; fallback: scan JSON contents.
     """
 
-    sid = puzzle_id.split("-")[0]
+    normalized = _normalize_id_fragment(puzzle_id)
+    sid = normalized.split("-")[0].lower()
 
-    # Fast path: try filename glob using short-id suffix.
-    candidates = sorted(PUZZLES_DIR.glob(f"*_{sid}.json"), key=lambda p: p.stat().st_mtime)
+    # Fast path: suffix match on known puzzle JSON filenames (no glob with user input).
+    candidates = [p for p in list_puzzle_jsons() if p.name.lower().endswith(f"_{sid}.json")]
     if candidates:
         # If user gave only short id, just return latest match.
-        if "-" not in puzzle_id:
+        if "-" not in normalized:
             return candidates[-1]
 
         # If user gave full UUID, verify candidate content before returning.
         for p in reversed(candidates):
             try:
                 d = json.loads(p.read_text(encoding="utf-8"))
-                if str(d.get("picked", {}).get("id")) == puzzle_id:
+                if str(d.get("picked", {}).get("id", "")).lower() == normalized.lower():
                     return p
             except Exception:
                 continue
 
     # Slow path: scan all stored docs.
-    files = list_puzzle_jsons()
-    for p in reversed(files):
+    for p in reversed(list_puzzle_jsons()):
         try:
             d = json.loads(p.read_text(encoding="utf-8"))
-            if str(d.get("picked", {}).get("id")) == puzzle_id:
+            if str(d.get("picked", {}).get("id", "")).lower() == normalized.lower():
                 return p
         except Exception:
             continue
@@ -334,10 +386,13 @@ def load_puzzle_doc(*, puzzle_id: Optional[str] = None, latest: bool = False) ->
     if puzzle_id is not None and latest:
         raise SystemExit("Use only one of --id / --latest")
 
-    if puzzle_id is not None:
-        p = find_puzzle_json_by_id(puzzle_id)
-    else:
-        p = latest_puzzle_json()
+    try:
+        if puzzle_id is not None:
+            p = find_puzzle_json_by_id(puzzle_id)
+        else:
+            p = latest_puzzle_json()
+    except (ValueError, FileNotFoundError) as e:
+        raise SystemExit(str(e))
 
     doc = json.loads(p.read_text(encoding="utf-8"))
     return doc, p
@@ -424,6 +479,105 @@ def render_puzzle_pdf(doc: Dict[str, Any], *, printable: bool = True, dpi: int =
         letters_mode=letters_mode,
         dpi=dpi,
     )
+    return out
+
+
+def render_puzzle_html(doc: Dict[str, Any]) -> Path:
+    out = render_paths(doc, kind="puzzle", ext="html")
+
+    clues = doc["clues"]
+    size = int(doc["size"])
+    letters_mode = bool(doc.get("preset", {}).get("letters", False))
+    bw, bh = get_block_dims(size)
+
+    def cell_text(v: int) -> str:
+        return format_cell_value(int(v), letters_mode)
+
+    rows: List[str] = []
+    for r in range(size):
+        cells: List[str] = []
+        for c in range(size):
+            v = int(clues[r][c])
+            classes: List[str] = []
+            if c == 0:
+                classes.append("edge-left")
+            if r == 0:
+                classes.append("edge-top")
+            if (c + 1) % bw == 0:
+                classes.append("edge-right-thick")
+            else:
+                classes.append("edge-right")
+            if (r + 1) % bh == 0:
+                classes.append("edge-bottom-thick")
+            else:
+                classes.append("edge-bottom")
+
+            classes_s = " ".join(classes)
+            text = cell_text(v)
+            cells.append(f'<td class="{classes_s}"><span class="cell-value">{text}</span></td>')
+        rows.append("<tr>" + "".join(cells) + "</tr>")
+
+    html = f"""<!doctype html>
+<html lang=\"en\">
+<head>
+  <meta charset=\"utf-8\" />
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+  <title>Sudoku</title>
+  <style>
+    :root {{
+      --cell: 56px;
+      --thin: 1px;
+      --thick: 3px;
+      --line: #444;
+      --thick-line: #000;
+    }}
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif;
+    }}
+    table.sudoku {{
+      border-collapse: collapse;
+      border-spacing: 0;
+    }}
+    table.sudoku td {{
+      width: var(--cell);
+      height: var(--cell);
+      min-width: var(--cell);
+      min-height: var(--cell);
+      text-align: center;
+      vertical-align: middle;
+      box-sizing: border-box;
+      padding: 0;
+    }}
+    .cell-value {{
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      font-size: calc(var(--cell) * 0.52);
+      line-height: 1;
+      font-weight: 600;
+      color: #111;
+    }}
+    .edge-left {{ border-left: var(--thick) solid var(--thick-line); }}
+    .edge-top {{ border-top: var(--thick) solid var(--thick-line); }}
+    .edge-right {{ border-right: var(--thin) solid var(--line); }}
+    .edge-bottom {{ border-bottom: var(--thin) solid var(--line); }}
+    .edge-right-thick {{ border-right: var(--thick) solid var(--thick-line); }}
+    .edge-bottom-thick {{ border-bottom: var(--thick) solid var(--thick-line); }}
+  </style>
+</head>
+<body>
+  <table class=\"sudoku\" aria-label=\"Sudoku grid\">{''.join(rows)}</table>
+</body>
+</html>
+"""
+
+    out.write_text(html, encoding="utf-8")
     return out
 
 
@@ -578,7 +732,10 @@ def cmd_get(args: argparse.Namespace) -> int:
 
     if count == 1:
         puzzles = fetch_puzzles(preset.url)
-        puzzle, picked_idx = pick_puzzle(puzzles, puzzle_id=args.id)
+        try:
+            puzzle, picked_idx = pick_puzzle(puzzles, puzzle_id=args.id)
+        except ValueError as e:
+            raise SystemExit(str(e))
         selected.append((puzzle, picked_idx, len(puzzles)))
     else:
         used_ids = _previously_used_puzzle_ids()
@@ -716,6 +873,18 @@ def cmd_render(args: argparse.Namespace) -> int:
         print(json.dumps(out, ensure_ascii=False))
     else:
         print(str(list(out.values())[-1]))
+    return 0
+
+
+def cmd_html(args: argparse.Namespace) -> int:
+    doc, json_path = load_puzzle_doc(puzzle_id=args.id, latest=args.latest)
+    html = render_puzzle_html(doc)
+    out = {"puzzle_json": str(json_path), "puzzle_html": str(html)}
+
+    if args.json:
+        print(json.dumps(out, ensure_ascii=False))
+    else:
+        print(str(html))
     return 0
 
 
@@ -870,6 +1039,14 @@ def build_parser() -> argparse.ArgumentParser:
     p_ren.add_argument("--text", dest="json", action="store_false", help="Output text instead of JSON")
     p_ren.set_defaults(json=True)
     p_ren.set_defaults(func=cmd_render)
+
+    p_html = sub.add_parser("html", help="Render puzzle as minimal HTML")
+    g_html = p_html.add_mutually_exclusive_group(required=False)
+    g_html.add_argument("--latest", action="store_true", help="Use latest stored puzzle (default)")
+    g_html.add_argument("--id", help="Puzzle ID (full UUID or short 8-char ID from filename)")
+    p_html.add_argument("--text", dest="json", action="store_false", help="Output text instead of JSON")
+    p_html.set_defaults(json=True)
+    p_html.set_defaults(func=cmd_html)
 
     p_share = sub.add_parser("share", help="Generate share link")
     g_share = p_share.add_mutually_exclusive_group(required=False)

@@ -1,7 +1,7 @@
 ---
 name: sudoku
 description: Fetch Sudoku puzzles and store them as JSON in the workspace; render images on demand; reveal solutions later.
-version: 2.3.0
+version: 2.4.0
 homepage: https://github.com/odrobnik/sudoku-skill
 metadata:
   openclaw:
@@ -63,7 +63,7 @@ Use `--id <fragment>` to select a specific source puzzle by matching any unique 
 
 ## Render Puzzle
 
-Render a puzzle as an image or PDF.
+Render a puzzle as an image, PDF, or minimal HTML.
 
 **Render latest puzzle as A4 PDF (for printing):**
 ```bash
@@ -78,6 +78,11 @@ Render a puzzle as an image or PDF.
 **Render a specific previous puzzle by short ID:**
 ```bash
 ./scripts/sudoku.py render --id a09f3680
+```
+
+**Render minimal HTML (square cells + bold box lines):**
+```bash
+./scripts/sudoku.py html --id a09f3680
 ```
 
 ## Reveal Solution
