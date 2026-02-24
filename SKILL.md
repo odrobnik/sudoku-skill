@@ -1,7 +1,7 @@
 ---
 name: sudoku
 description: Fetch Sudoku puzzles and store them as JSON in the workspace; render images on demand; reveal solutions later.
-version: 2.2.0
+version: 2.3.0
 homepage: https://github.com/odrobnik/sudoku-skill
 metadata:
   openclaw:
@@ -42,9 +42,18 @@ For details on the saved JSON format, see [DATA_FORMAT.md](references/DATA_FORMA
 
 Fetches a new puzzle and stores it as JSON. Output is JSON by default (use `--text` for human-readable output).
 
+Use `--count N` to fetch/store multiple puzzles in one call. If a batch does not contain enough unseen puzzles, the command will fetch additional batches until it has enough.
+
+Use `--id <fragment>` to select a specific source puzzle by matching any unique part of its UUID. If multiple IDs match, the command errors and lists candidates.
+
 **Get a Classic Easy puzzle:**
 ```bash
 ./scripts/sudoku.py get easy9
+```
+
+**Get multiple new puzzles at once (e.g. 4 easy 9x9):**
+```bash
+./scripts/sudoku.py get easy9 --count 4
 ```
 
 **Get a Kids 6x6 puzzle:**
