@@ -1,16 +1,16 @@
-# Sudoku (Moltbot Skill)
+# Sudoku
 
 Fetch, render, and reveal Sudoku puzzles.
 
-- 📦 Install via ClawdHub: https://clawdhub.com/s/sudoku
+- 📦 Install via ClawHub: https://clawhub.com/s/sudoku
 - 🤖 How the skill works (agent docs): **[SKILL.md](SKILL.md)**
 
-This is a skill for [Moltbot](https://github.com/moltbot/moltbot).
+This is a skill for [OpenClaw](https://github.com/openclaw/openclaw).
 
 ## Requirements
 
 ```bash
-python3 -m pip install requests Pillow
+python3 -m pip install requests Pillow lzstring
 ```
 
 ## Functions
@@ -74,4 +74,4 @@ Reveal the solution for the latest or specific puzzle.
 ## Documentation
 
 - [SKILL.md](SKILL.md) — agent-facing reference (commands, behavior, limitations)
-- [ClawHub](https://www.clawhub.com/skills/sudoku) — install via ClawHub registry
+- [ClawHub](https://clawhub.com/s/sudoku) — install via ClawHub registry
