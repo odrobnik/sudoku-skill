@@ -246,7 +246,7 @@ def generate_puzzle_link(grid, size, title="Sudoku", author="Sudoku Skill"):
 
     try:
         compressed = _lz.compressToBase64(json_str)
-        return f"https://sudokupad.app/ctc{compressed}"
+        return f"https://sudokupad.svencodes.com/puzzle/ctc{compressed}"
     except Exception as e:
         return f"Error generating puzzle link: {e}"
 
@@ -272,9 +272,12 @@ def generate_native_link(grid, size, title="Sudoku"):
 
     try:
         compressed = _lz.compressToBase64(json.dumps(wrapper, separators=(',', ':')))
-        # SudokuPad web player requires 'ctc' prefix for CTC/LZString format.
-        # Raw base64 (including / and +) is safe — SudokuPad's SPA handles it.
-        return f"https://sudokupad.app/ctc{compressed}"
+        # Use sudokupad.svencodes.com/puzzle/ — this is the universal link domain
+        # registered by the iOS/Android apps (AASA: /puzzle/*).
+        # The 'ctc' prefix tells the app and web player this is CTC/LZString format.
+        # Raw base64 (including / and +) must NOT be URL-encoded — the apps
+        # pass the payload directly to decompressFromBase64.
+        return f"https://sudokupad.svencodes.com/puzzle/ctc{compressed}"
     except Exception as e:
         return f"Error generating native link: {e}"
 
