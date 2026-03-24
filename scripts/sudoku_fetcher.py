@@ -245,8 +245,8 @@ def generate_puzzle_link(grid, size, title="Sudoku", author="Sudoku Skill"):
     json_str = json.dumps(scl_obj, separators=(',', ':'))
 
     try:
-        compressed = _lz.compressToBase64(json_str)
-        return f"https://sudokupad.svencodes.com/puzzle/{compressed}"
+        encoded = _lz.compressToEncodedURIComponent(json_str)
+        return f"https://sudokupad.svencodes.com/puzzle/{encoded}"
     except Exception as e:
         return f"Error generating puzzle link: {e}"
 
@@ -267,17 +267,26 @@ def generate_native_link(grid, size, title="Sudoku"):
         "p": p,
         "n": title,
         "s": "",
-        "m": f'Hi, please take a look at this puzzle: "{title}"',
+        "m": "",
     }
 
+    _BASE = "https://sudokupad.svencodes.com/puzzle/"
+    _MAX_URL = 251  # iOS SudokuPad universal link length limit
+
     try:
-        compressed = _lz.compressToBase64(json.dumps(wrapper, separators=(',', ':')))
-        # Use sudokupad.svencodes.com/puzzle/ — this is the universal link domain
-        # registered by the iOS/Android apps (AASA: /puzzle/*).
-        # No 'ctc' prefix — the iOS app expects raw LZString base64 directly.
-        # Raw base64 must NOT be URL-encoded — the app passes it directly
-        # to decompressFromBase64.
-        return f"https://sudokupad.svencodes.com/puzzle/{compressed}"
+        payload = json.dumps(wrapper, separators=(',', ':'), ensure_ascii=False)
+        blob = _lz.compressToBase64(payload)
+        # Strip '=' padding — iOS import path rejects it.
+        blob = blob.rstrip('=')
+        # Encode '/' to keep payload as single path segment.
+        blob = blob.replace('/', '%2F')
+        url = f"{_BASE}{blob}"
+        if len(url) > _MAX_URL:
+            # Fallback: drop message entirely to shorten
+            payload = json.dumps({"p": p, "n": title}, separators=(',', ':'), ensure_ascii=False)
+            blob = _lz.compressToBase64(payload).rstrip('=').replace('/', '%2F')
+            url = f"{_BASE}{blob}"
+        return url
     except Exception as e:
         return f"Error generating native link: {e}"
 
